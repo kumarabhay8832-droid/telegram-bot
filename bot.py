@@ -2,17 +2,17 @@ import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
-# 🔑 TOKEN (Railway env variable se)
-TOKEN = os.getenv("8618508924:AAFBI8TXWHGDJ1kVjTEZYP1IICVysiN9TRw")
+# ✅ TOKEN (Railway se aayega)
+TOKEN = os.getenv("8618508924:AAFB18IXWHGDJlkVjTEZYPIlTCVysiN9TRw")
 
-# 📦 Data storage
-users_gender = {}        # user_id : gender
-waiting_male = []        # male queue
-waiting_female = []      # female queue
-connections = {}         # active chats
+# 📦 Data
+users_gender = {}
+waiting_male = []
+waiting_female = []
+connections = {}
 
 
-# 🟢 START COMMAND
+# 🟢 START
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("👦 Male", callback_data="male")],
@@ -21,7 +21,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await update.message.reply_text(
-        "👋 Welcome!\n\nSelect your gender 👇",
+        "👋 Welcome!\nSelect your gender 👇",
         reply_markup=reply_markup
     )
 
@@ -33,21 +33,19 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = query.from_user.id
 
-    # 👉 Gender select
     if query.data == "male":
         users_gender[user_id] = "male"
-        await query.message.reply_text("✅ You selected Male\nClick /find to start")
+        await query.message.reply_text("✅ Male selected\nUse /find")
 
     elif query.data == "female":
         users_gender[user_id] = "female"
-        await query.message.reply_text("✅ You selected Female\nClick /find to start")
+        await query.message.reply_text("✅ Female selected\nUse /find")
 
-    # 👉 Find partner
     elif query.data == "find":
         gender = users_gender.get(user_id)
 
         if not gender:
-            await query.message.reply_text("⚠️ Please select gender first (/start)")
+            await query.message.reply_text("⚠️ First select gender /start")
             return
 
         if gender == "male":
@@ -75,16 +73,12 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.message.reply_text("⏳ Waiting for male...")
 
 
-# 🟢 FIND COMMAND (button ke bina bhi kaam kare)
+# 🟢 FIND COMMAND
 async def find(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
-
-    keyboard = [
-        [InlineKeyboardButton("🔍 Find Partner", callback_data="find")]
-    ]
+    keyboard = [[InlineKeyboardButton("🔍 Find Partner", callback_data="find")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text("Click below to find partner 👇", reply_markup=reply_markup)
+    await update.message.reply_text("Click below 👇", reply_markup=reply_markup)
 
 
 # 🟢 MESSAGE FORWARD
@@ -98,7 +92,7 @@ async def message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ Not connected. Use /find")
 
 
-# 🟢 MAIN FUNCTION
+# 🟢 MAIN
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
@@ -107,10 +101,9 @@ def main():
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message))
 
-    print("Bot is running...")
+    print("Bot running...")
     app.run_polling()
 
 
-# ▶️ RUN
 if __name__ == "__main__":
     main()
