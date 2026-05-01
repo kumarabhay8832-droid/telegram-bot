@@ -3,7 +3,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
 # 🔑 TOKEN (Railway env variable se)
-TOKEN = os.getenv("8618508924:AAFB18IXWHGDJlkVjTEZYPIlTCVysiN9TRw")
+TOKEN = os.getenv("8618508924:AAFBI8TXWHGDJ1kVjTEZYP1IICVysiN9TRw")
 
 # 📦 Data storage
 users_gender = {}        # user_id : gender
