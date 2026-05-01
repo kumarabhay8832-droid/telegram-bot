@@ -4,7 +4,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 
 # ✅ TOKEN (Railway se aayega)
 import os
-TOKEN = os.getenv("8618508924:AAFB18IXWHGDJlkVjTEZYPIlTCVysiN9TRw")
+TOKEN = "8618508924:AAFB18IXWHGDJlkVjTEZYPIlTCVysiN9TRw"
 
 # 📦 Data
 users_gender = {}
