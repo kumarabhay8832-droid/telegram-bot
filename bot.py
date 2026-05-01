@@ -1,102 +1,116 @@
-import logging
+import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    CallbackQueryHandler,
-    MessageHandler,
-    ContextTypes,
-    filters,
-)
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
-TOKEN = "8618508924:AAFB18IXWHGDJlkVjTEZYPIlTCVysiN9TRw"
+# 🔑 TOKEN (Railway env variable se)
+TOKEN = os.getenv("BOT_TOKEN")
 
-waiting_user = None
-active_chats = {}
+# 📦 Data storage
+users_gender = {}        # user_id : gender
+waiting_male = []        # male queue
+waiting_female = []      # female queue
+connections = {}         # active chats
 
-logging.basicConfig(level=logging.INFO)
 
-# Start command
+# 🟢 START COMMAND
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-        [InlineKeyboardButton("🔍 Find Partner", callback_data="find")],
-        [InlineKeyboardButton("⏭ Next", callback_data="next")],
-        [InlineKeyboardButton("⛔ Stop", callback_data="stop")],
+        [InlineKeyboardButton("👦 Male", callback_data="male")],
+        [InlineKeyboardButton("👧 Female", callback_data="female")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await update.message.reply_text(
-        "👋 Welcome!\n\nClick 'Find Partner' to start chatting with strangers.",
-        reply_markup=reply_markup,
+        "👋 Welcome!\n\nSelect your gender 👇",
+        reply_markup=reply_markup
     )
 
-# Button handler
-async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    global waiting_user
-    query = update.callback_query
-    user_id = query.from_user.id
 
+# 🟢 BUTTON HANDLER
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
     await query.answer()
 
-    # FIND PARTNER
-    if query.data == "find":
-        if user_id in active_chats:
-            await query.message.reply_text("⚠️ You are already in a chat.")
+    user_id = query.from_user.id
+
+    # 👉 Gender select
+    if query.data == "male":
+        users_gender[user_id] = "male"
+        await query.message.reply_text("✅ You selected Male\nClick /find to start")
+
+    elif query.data == "female":
+        users_gender[user_id] = "female"
+        await query.message.reply_text("✅ You selected Female\nClick /find to start")
+
+    # 👉 Find partner
+    elif query.data == "find":
+        gender = users_gender.get(user_id)
+
+        if not gender:
+            await query.message.reply_text("⚠️ Please select gender first (/start)")
             return
 
-        if waiting_user is None:
-            waiting_user = user_id
-            await query.message.reply_text("⏳ Waiting for a partner...")
-        else:
-            partner = waiting_user
-            waiting_user = None
+        if gender == "male":
+            if waiting_female:
+                partner = waiting_female.pop(0)
+                connections[user_id] = partner
+                connections[partner] = user_id
 
-            active_chats[user_id] = partner
-            active_chats[partner] = user_id
+                await context.bot.send_message(partner, "💬 Connected!")
+                await query.message.reply_text("💬 Connected!")
+            else:
+                waiting_male.append(user_id)
+                await query.message.reply_text("⏳ Waiting for female...")
 
-            await context.bot.send_message(user_id, "✅ Connected! Say hi 👋")
-            await context.bot.send_message(partner, "✅ Connected! Say hi 👋")
+        elif gender == "female":
+            if waiting_male:
+                partner = waiting_male.pop(0)
+                connections[user_id] = partner
+                connections[partner] = user_id
 
-    # NEXT PARTNER
-    elif query.data == "next":
-        await disconnect(user_id, context)
-        await button(update, context)
+                await context.bot.send_message(partner, "💬 Connected!")
+                await query.message.reply_text("💬 Connected!")
+            else:
+                waiting_female.append(user_id)
+                await query.message.reply_text("⏳ Waiting for male...")
 
-    # STOP CHAT
-    elif query.data == "stop":
-        await disconnect(user_id, context)
-        await query.message.reply_text("⛔ Chat stopped.")
 
-# Disconnect users
-async def disconnect(user_id, context):
-    if user_id in active_chats:
-        partner = active_chats[user_id]
+# 🟢 FIND COMMAND (button ke bina bhi kaam kare)
+async def find(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
 
-        await context.bot.send_message(partner, "❌ Partner left the chat.")
+    keyboard = [
+        [InlineKeyboardButton("🔍 Find Partner", callback_data="find")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
 
-        del active_chats[partner]
-        del active_chats[user_id]
+    await update.message.reply_text("Click below to find partner 👇", reply_markup=reply_markup)
 
-# Message handler (forward messages)
+
+# 🟢 MESSAGE FORWARD
 async def message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
 
-    if user_id in active_chats:
-        partner = active_chats[user_id]
-        await context.bot.send_message(partner, update.message.text)
+    if user_id in connections:
+        partner = connections[user_id]
+        await context.bot.send_message(chat_id=partner, text=update.message.text)
     else:
-        await update.message.reply_text("⚠️ Click 'Find Partner' first.")
+        await update.message.reply_text("⚠️ Not connected. Use /find")
 
-# Main function
+
+# 🟢 MAIN FUNCTION
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("find", find))
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message))
 
     print("Bot is running...")
     app.run_polling()
 
+
+# ▶️ RUN
 if __name__ == "__main__":
     main()
